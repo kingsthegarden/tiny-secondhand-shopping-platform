@@ -14,11 +14,13 @@ Flask + Flask-SocketIO + SQLite 기반이며, 개발 전 과정에서 보안 약
 
 ## 환경 설정
 
-Ubuntu(WSL 포함) + miniconda 기준:
+**Linux(Ubuntu/WSL) 환경에서 실행하는 것을 전제로 합니다.** Windows 네이티브 환경은 지원 대상이 아닙니다.
+
+miniconda 기준:
 
 ```bash
-git clone <이 저장소 URL>
-cd <저장소 디렉토리>
+git clone https://github.com/kingsthegarden/tiny-secondhand-shopping-platform.git
+cd tiny-secondhand-shopping-platform
 
 conda env create -f environments.yaml
 conda activate secure_coding
@@ -33,13 +35,19 @@ pip install -r requirements.txt
 ## 실행 방법
 
 ```bash
-# 1. 관리자 계정 생성 (최초 1회)
+# 1. 관리자 계정 생성 (최초 1회) — 대화형으로 실행하면 비밀번호 입력 프롬프트가 나타남
 flask --app app create-admin admin
-# 비밀번호 입력 프롬프트가 나타남 (8자 이상, 영문+숫자)
+# (8자 이상, 영문+숫자 포함)
 
 # 2. 서버 실행
 python app.py
 # → http://localhost:5000
+```
+
+자동 채점 스크립트 등 비대화형(non-interactive) 환경에서는 `--password` 옵션으로 프롬프트 없이 바로 생성할 수 있습니다:
+
+```bash
+flask --app app create-admin admin --password 'AdminPass1'
 ```
 
 - 데이터베이스(SQLite)와 세션 서명 키는 최초 실행 시 `instance/` 아래에 자동 생성됩니다.
