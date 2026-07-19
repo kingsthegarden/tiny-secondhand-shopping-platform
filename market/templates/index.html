@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}홈{% endblock %}
+{% block content %}
+<section class="hero">
+  <h1>Tiny Second-hand Shopping Platform</h1>
+  <p>가입하고, 상품을 올리고, 채팅하고, 안전하게 거래하세요.</p>
+  <div class="hero-actions">
+    <a class="btn btn-primary" href="{{ url_for('main.product_list') }}">상품 구경하기</a>
+    {% if not current_user %}
+      <a class="btn" href="{{ url_for('auth.register') }}">회원가입</a>
+    {% else %}
+      <a class="btn" href="{{ url_for('products.new') }}">상품 등록하기</a>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

@@ -1,0 +1,116 @@
+# Tiny Second-hand Shopping Platform 개발 보고서 (초안)
+
+> 제출용 PDF로 변환하기 전 초안입니다. GitHub 저장소 링크와 본인 정보(반, 이름 등)를 채워 넣으세요.
+>
+> - GitHub 저장소: `https://github.com/<본인계정>/<저장소명>` ← **제출 전 반드시 기입**
+> - 제출 파일명 형식: `[WHS][secure-coding][XX반]이름(전화번호뒷자리).pdf`
+
+## 1. 개요
+
+중고거래가 가능한 웹 플랫폼(Tiny Second-hand Shopping Platform)을 소프트웨어 개발 주기(요구사항 분석 → 시스템 설계 → 구현 → 체크리스트 작성·테스팅 → 유지보수)에 따라 개발했다. 모든 단계에서 "기능이 동작하는 것"과 별개로 "보안 약점이 없는 것"을 목표로, 각 기능을 구현할 때마다 해당 기능에서 발생 가능한 공격을 함께 정리하고 방어 코드를 작성했다.
+
+- 기술 스택: Python(Flask), Flask-SocketIO(실시간 채팅), Flask-SQLAlchemy(ORM, SQLite), Flask-WTF(입력 검증·CSRF)
+- 개발 도구: Claude Code (AI 도구를 적극 활용하되, 보안 요구사항은 체크리스트로 사람이 직접 점검)
+
+## 2. 요구사항 분석
+
+### 2.1 기능 요구사항 (강의 슬라이드 기준)
+
+| 분류 | 요구사항 |
+|---|---|
+| 유저 관리 | 회원가입(아이디 중복 금지), 로그인, 사용자 프로필 조회, 마이페이지(소개글·비밀번호 수정), 유저 정보 DB 관리 |
+| 상품 관리 | 상품 등록(상품명·설명·가격·사진), 내 상품 확인·관리, 목록은 이름만 표시 후 클릭 시 상세 페이지, 누구나 조회 가능, 상품 검색, 상품 정보 DB 관리 |
+| 유저 소통 | 전체 사용자 실시간 채팅, 1:1 채팅 |
+| 악성 필터링 | 사용자·상품 신고(사유 작성 필수), 일정 횟수 이상 신고된 상품 차단, 일정 횟수 이상 신고된 유저 휴면 전환 |
+| 거래 | 유저 간 송금 |
+| 관리자 | 플랫폼의 모든 요소(사용자·상품·신고 등) 관리 |
+
+### 2.2 비기능 요구사항
+
+- **보안**: 인젝션, XSS, CSRF, 인증·인가 결함, 파일 업로드, 경쟁 조건 등 알려진 웹 취약점이 없을 것
+- 단순하고 일관된 UI, 로컬(WSL/Ubuntu)에서 간단히 실행 가능할 것
+
+### 2.3 위협 모델링 (요구사항 단계의 보안 분석)
+
+기능별로 예상 공격을 먼저 도출했다. 예: 로그인(무차별 대입, 계정 열거, 세션 고정), 검색(SQL 인젝션), 상품 설명·채팅(Stored XSS), 송금(CSRF, 음수 금액, 경쟁 조건에 의한 이중 지불), 사진 업로드(웹셸 업로드, 경로 조작), 신고(신고 남용에 의한 임의 차단), 채팅(비인증 접속, 타인 대화방 도청). 이 목록이 이후 설계·구현·테스트의 기준이 되었다.
+
+## 3. 시스템 설계
+
+### 3.1 아키텍처
+
+Flask 앱 팩토리 + 기능별 Blueprint 구조. 실시간 채팅은 Socket.IO 이벤트 핸들러로 분리.
+
+```
+브라우저 ── HTTP ──▶ Flask (auth/products/users/chat/wallet/reports/admin Blueprint)
+        ── WebSocket ──▶ Flask-SocketIO (global chat, 1:1 DM)
+                              │
+                        SQLAlchemy ORM ──▶ SQLite (instance/market.db)
+```
+
+### 3.2 데이터베이스 설계
+
+| 테이블 | 주요 컬럼 | 비고 |
+|---|---|---|
+| users | id, username(UNIQUE), password_hash, bio, role, status, balance, failed_logins, locked_until | 비밀번호는 해시만 저장, status: active/dormant/banned |
+| products | id, title, description, price, image_filename, status, seller_id | status: active/blocked |
+| reports | id, reporter_id, target_type, target_id, reason, status | (reporter, target) UNIQUE — 중복 신고 차단 |
+| chat_messages | id, room, sender_id, content | room: "global" 또는 "dm:<小id>:<大id>" |
+| transfers | id, sender_id, receiver_id, amount, memo | 송금 이력 |
+| audit_logs | id, actor_id, action, detail | 보안 이벤트 감사 로그 |
+
+### 3.3 페이지 설계
+
+기본/회원가입/로그인/상품 목록·검색/상품 등록·수정/상품 상세/내 상품/프로필/마이페이지/전체 채팅/1:1 채팅 목록·대화/지갑(송금)/신고/관리자(대시보드·사용자·상품·신고·로그) — 총 19개 화면.
+
+### 3.4 설계 단계의 보안 결정
+
+- 모든 상태 변경은 POST + CSRF 토큰 필수 (로그아웃 포함)
+- 권한 검사는 항상 서버측에서: `login_required`/`admin_required` 데코레이터, 소유자 검증, 채팅방 멤버십 검증
+- 송금은 "확인 후 차감"이 아니라 **조건부 UPDATE 한 번**으로 원자 처리 (TOCTOU 방지)
+- 신고 임계값은 "서로 다른 신고자 수" 기준 (DB UNIQUE 제약으로 강제)
+- CSP `script-src 'self'`를 지키기 위해 인라인 스크립트 0개로 설계, socket.io 클라이언트도 self-host
+
+## 4. 구현
+
+구현 세부는 저장소 코드 참고. 보안 관점의 핵심 구현:
+
+1. **인증**: scrypt 해시, 로그인 5회 실패 시 5분 잠금 + IP 레이트리밋, 실패 사유 비구분 메시지, 로그인 성공 시 세션 재발급
+2. **입력 검증**: 모든 폼을 Flask-WTF로 서버측 검증(길이·형식·범위), 검색어 LIKE 이스케이프
+3. **XSS 방어**: Jinja2 autoescape 유지 + 채팅 클라이언트 textContent 렌더링 + CSP로 3중 방어
+4. **파일 업로드**: 확장자 허용목록 + 매직바이트 검사 + 서버 생성 랜덤 파일명 + 2MB 제한
+5. **송금**: `UPDATE users SET balance = balance - :amt WHERE id = :me AND balance >= :amt` — rowcount가 1일 때만 입금 진행
+6. **자동 제재**: 상품 3회/사용자 5회(서로 다른 신고자) 이상 신고 시 자동 차단/휴면, 관리자 기각 시 카운트 제외
+7. **관리자**: 사용자 상태·권한, 상품 차단·삭제, 신고 처리, 감사 로그 열람. 관리자 계정은 CLI(`flask create-admin`)로만 생성
+8. **보안 헤더**: CSP, X-Frame-Options, X-Content-Type-Options, Referrer-Policy 전 응답 적용
+
+### 개발 과정에서 확인한 보안 약점과 수정
+
+기능 우선으로 작성했다면 존재했을 약점 39건을 식별하고 모두 조치했다. 전체 목록과 코드 위치는 저장소의 **SECURITY.md** 참고. 대표 사례:
+
+| 약점 | 수정 전(취약) | 수정 후 |
+|---|---|---|
+| SQL 인젝션 | 문자열 조합 쿼리 | 전 쿼리 ORM 바인딩 + LIKE 이스케이프 |
+| Stored XSS | 상품 설명을 그대로 출력 | autoescape + CSP + textContent |
+| CSRF | 토큰 없는 폼 | 전 폼 CSRF 토큰, SameSite=Lax |
+| IDOR | URL의 상품 id만으로 수정 허용 | 소유자/관리자 서버측 검증 후 403 |
+| 웹셸 업로드 | 확장자만 검사 | 매직바이트 + 랜덤 파일명 |
+| 이중 지불 | 잔액 조회 후 차감(2단계) | 조건부 UPDATE 원자 처리 |
+| 신고 남용 | 동일인 반복 신고 카운트 | (신고자,대상) UNIQUE 제약 |
+
+## 5. 체크리스트 작성 및 테스팅
+
+강의 제공 체크리스트를 기준으로 **CHECKLIST.md**를 작성하고, 각 항목을 pytest 자동화 테스트로 검증했다.
+
+- 테스트 33개: 기능 테스트(가입→로그인→상품 등록→검색→상세, 프로필/비밀번호 변경, 관리자 기능) + 보안 테스트(SQLi, XSS, CSRF, IDOR, 잠금, 휴면, 위조 이미지 업로드, 음수 송금, 중복 신고, 임계값 자동 차단, 보안 헤더, HttpOnly 쿠키)
+- 특징: **CSRF 보호를 끄지 않고** 실제 토큰을 파싱해 테스트 → 보안 기능이 켜진 실제 동작 그대로 검증
+- 결과: `python -m pytest tests/ -v` → 33 passed
+
+## 6. 유지보수
+
+- 실사용 점검: 서버 구동 후 전 페이지 수동 확인, ngrok으로 외부 접속 시나리오 확인
+- 사용성 개선: 상품 상세에서 판매자와 바로 1:1 채팅/송금/신고로 이동하는 동선 추가, 프로필에서도 동일 동작 제공
+- 남은 한계와 개선 계획을 SECURITY.md에 명시 (운영 WSGI 서버 + HTTPS, 레이트리밋 외부 저장소화, DB 이전, 2FA 등)
+
+## 7. 결론
+
+기능 구현과 동시에 보안을 점검하는 것이 얼마나 쉽게 누락되는지 확인할 수 있었다. 특히 AI 도구로 빠르게 기능을 만들 때, "동작하는 코드"와 "안전한 코드"의 차이는 요구사항 단계에서 위협을 먼저 정의하고 체크리스트로 강제할 때만 좁혀졌다. 위협 모델 → 설계 반영 → 구현 → 자동화 테스트로 검증하는 순환이 시큐어 코딩의 핵심임을 체득했다.

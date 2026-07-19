@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}상품 목록{% endblock %}
+{% block content %}
+<section>
+  <div class="page-head">
+    <h1>상품 목록</h1>
+    <form method="get" class="search-form" action="{{ url_for('main.product_list') }}">
+      <input class="input" type="text" name="q" value="{{ q }}" maxlength="100"
+             placeholder="상품명 검색">
+      <button type="submit" class="btn">검색</button>
+    </form>
+  </div>
+
+  {% if products %}
+    <ul class="product-name-list">
+      {% for p in products %}
+        <li><a href="{{ url_for('products.detail', product_id=p.id) }}">{{ p.title }}</a></li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p class="muted">{% if q %}"{{ q }}"에 대한 검색 결과가 없습니다.{% else %}등록된 상품이 없습니다.{% endif %}</p>
+  {% endif %}
+</section>
+{% endblock %}

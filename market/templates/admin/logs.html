@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}감사 로그{% endblock %}
+{% block content %}
+<h1>감사 로그</h1>
+<table class="table">
+  <thead><tr><th>ID</th><th>행위자</th><th>액션</th><th>상세</th><th>일시</th></tr></thead>
+  <tbody>
+    {% for log in logs %}
+    <tr>
+      <td>{{ log.id }}</td>
+      <td>{{ log.actor_id if log.actor_id is not none else '-' }}</td>
+      <td>{{ log.action }}</td>
+      <td class="reason-cell">{{ log.detail }}</td>
+      <td>{{ log.created_at.strftime("%Y-%m-%d %H:%M:%S") }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

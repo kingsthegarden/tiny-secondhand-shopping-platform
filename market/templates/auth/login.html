@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% from "_macros.html" import render_field %}
+{% block title %}로그인{% endblock %}
+{% block content %}
+<section class="card narrow">
+  <h1>로그인</h1>
+  <form method="post">
+    {{ form.csrf_token }}
+    {{ render_field(form.username) }}
+    {{ render_field(form.password) }}
+    <button type="submit" class="btn btn-primary btn-block">로그인</button>
+  </form>
+  <p class="muted">계정이 없나요? <a href="{{ url_for('auth.register') }}">회원가입</a></p>
+</section>
+{% endblock %}

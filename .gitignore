@@ -1,0 +1,17 @@
+# runtime data (DB, secret key)
+instance/
+
+# user uploads
+market/static/uploads/*
+!market/static/uploads/.gitkeep
+
+# python
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+
+# course materials (not part of the program)
+*.pdf
+*.pdf:Zone.Identifier
+\[시큐어 코딩\] 과제 공지.txt

@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}사용자 관리{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>사용자 관리</h1>
+  <form method="get" class="search-form">
+    <input class="input" type="text" name="q" value="{{ q }}" maxlength="20" placeholder="아이디 검색">
+    <button type="submit" class="btn">검색</button>
+  </form>
+</div>
+<table class="table">
+  <thead><tr><th>ID</th><th>아이디</th><th>권한</th><th>상태</th><th>잔액</th><th>가입일</th><th>변경</th></tr></thead>
+  <tbody>
+    {% for u in users %}
+    <tr>
+      <td>{{ u.id }}</td>
+      <td><a href="{{ url_for('users.profile', user_id=u.id) }}">{{ u.username }}</a></td>
+      <td>{{ u.role }}</td>
+      <td><span class="badge badge-{{ u.status }}">{{ u.status }}</span></td>
+      <td>{{ "{:,}".format(u.balance) }}원</td>
+      <td>{{ u.created_at.strftime("%Y-%m-%d") }}</td>
+      <td>
+        <form class="inline-form row-form" method="post" action="{{ url_for('admin.update_user', user_id=u.id) }}">
+          {{ form.csrf_token }}
+          <select name="status" class="input input-sm">
+            {% for s in ['active', 'dormant', 'banned'] %}
+            <option value="{{ s }}" {% if u.status == s %}selected{% endif %}>{{ s }}</option>
+            {% endfor %}
+          </select>
+          <select name="role" class="input input-sm">
+            {% for r in ['user', 'admin'] %}
+            <option value="{{ r }}" {% if u.role == r %}selected{% endif %}>{{ r }}</option>
+            {% endfor %}
+          </select>
+          <button type="submit" class="btn btn-sm">적용</button>
+        </form>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

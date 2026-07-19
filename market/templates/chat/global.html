@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}전체 채팅{% endblock %}
+{% block content %}
+<section class="card">
+  <h1>전체 채팅</h1>
+  <div id="chat-box" class="chat-box"
+       data-room="global" data-me="{{ current_user.id }}">
+    {% for m in messages %}
+    <div class="chat-msg {{ 'mine' if m.sender_id == current_user.id else '' }}">
+      <span class="chat-sender">{{ m.sender.username }}</span>
+      <span class="chat-content">{{ m.content }}</span>
+      <span class="chat-time">{{ m.created_at.strftime("%H:%M") }}</span>
+    </div>
+    {% endfor %}
+  </div>
+  <form id="chat-form" class="chat-form">
+    <input id="chat-input" class="input" type="text" maxlength="500"
+           placeholder="메시지를 입력하세요 (최대 500자)" autocomplete="off">
+    <button type="submit" class="btn btn-primary">전송</button>
+  </form>
+  <p id="chat-error" class="field-error"></p>
+</section>
+{% endblock %}
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/socket.io.min.js') }}"></script>
+<script src="{{ url_for('static', filename='js/chat.js') }}"></script>
+{% endblock %}

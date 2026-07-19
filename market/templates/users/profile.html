@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}{{ user.username }} 프로필{% endblock %}
+{% block content %}
+<section class="card">
+  <div class="page-head">
+    <h1>{{ user.username }}</h1>
+    <span class="badge badge-{{ user.status }}">{{ user.status }}</span>
+  </div>
+  <p class="muted">가입일: {{ user.created_at.strftime("%Y-%m-%d") }}</p>
+  <div class="description">{{ user.bio or "소개글이 없습니다." }}</div>
+
+  {% if current_user and current_user.id != user.id %}
+  <div class="actions">
+    <a class="btn btn-primary" href="{{ url_for('chat.dm', user_id=user.id) }}">1:1 채팅</a>
+    <a class="btn" href="{{ url_for('wallet.index', to=user.username) }}">송금하기</a>
+    <a class="btn btn-danger-outline" href="{{ url_for('reports.report', target_type='user', target_id=user.id) }}">신고</a>
+  </div>
+  {% endif %}
+</section>
+
+<section>
+  <h2>판매 상품</h2>
+  {% if products %}
+  <ul class="product-name-list">
+    {% for p in products %}
+      <li><a href="{{ url_for('products.detail', product_id=p.id) }}">{{ p.title }}</a></li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p class="muted">판매 중인 상품이 없습니다.</p>
+  {% endif %}
+</section>
+{% endblock %}

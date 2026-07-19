@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}{{ product.title }}{% endblock %}
+{% block content %}
+<section class="card">
+  {% if product.status != 'active' %}
+    <div class="flash flash-warning">이 상품은 현재 차단된 상태입니다. (판매자/관리자에게만 보입니다)</div>
+  {% endif %}
+  <div class="product-detail">
+    <div class="product-image-box">
+      {% if product.image_filename %}
+        <img class="product-image" alt="{{ product.title }}"
+             src="{{ url_for('static', filename='uploads/' + product.image_filename) }}">
+      {% else %}
+        <div class="product-image placeholder">사진 없음</div>
+      {% endif %}
+    </div>
+    <div class="product-info">
+      <h1>{{ product.title }}</h1>
+      <p class="price">{{ "{:,}".format(product.price) }}원</p>
+      <p class="muted">판매자:
+        <a href="{{ url_for('users.profile', user_id=product.seller.id) }}">{{ product.seller.username }}</a>
+        · {{ product.created_at.strftime("%Y-%m-%d") }}
+      </p>
+      <div class="description">{{ product.description }}</div>
+
+      <div class="actions">
+        {% if current_user and not is_owner %}
+          <a class="btn btn-primary" href="{{ url_for('chat.dm', user_id=product.seller.id) }}">판매자와 채팅</a>
+          <a class="btn" href="{{ url_for('wallet.index', to=product.seller.username) }}">송금하기</a>
+          <a class="btn btn-danger-outline" href="{{ url_for('reports.report', target_type='product', target_id=product.id) }}">신고</a>
+        {% endif %}
+        {% if is_owner or (current_user and current_user.is_admin) %}
+          <a class="btn" href="{{ url_for('products.edit', product_id=product.id) }}">수정</a>
+          <form class="inline-form" method="post"
+                action="{{ url_for('products.delete', product_id=product.id) }}">
+            {{ form.csrf_token }}
+            <button type="submit" class="btn btn-danger">삭제</button>
+          </form>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

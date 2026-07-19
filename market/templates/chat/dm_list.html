@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}1:1 채팅{% endblock %}
+{% block content %}
+<section class="card">
+  <h1>1:1 채팅</h1>
+  {% if partners %}
+  <ul class="dm-list">
+    {% for p in partners %}
+    <li><a href="{{ url_for('chat.dm', user_id=p.id) }}">{{ p.username }}</a></li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p class="muted">진행 중인 대화가 없습니다. 상품 페이지나 프로필에서 "1:1 채팅"을 눌러 시작하세요.</p>
+  {% endif %}
+</section>
+{% endblock %}

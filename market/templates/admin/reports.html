@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}신고 관리{% endblock %}
+{% block content %}
+<h1>신고 관리</h1>
+{% if reports %}
+<table class="table">
+  <thead><tr><th>ID</th><th>신고자</th><th>대상</th><th>사유</th><th>상태</th><th>일시</th><th>처리</th></tr></thead>
+  <tbody>
+    {% for r in reports %}
+    <tr>
+      <td>{{ r.id }}</td>
+      <td>{{ r.reporter.username }}</td>
+      <td>
+        <span class="badge">{{ '사용자' if r.target_type == 'user' else '상품' }}</span>
+        {{ targets[r.id] }}
+      </td>
+      <td class="reason-cell">{{ r.reason }}</td>
+      <td><span class="badge badge-{{ r.status }}">{{ r.status }}</span></td>
+      <td>{{ r.created_at.strftime("%Y-%m-%d %H:%M") }}</td>
+      <td class="actions-cell">
+        {% if r.status == 'pending' %}
+        <form class="inline-form" method="post" action="{{ url_for('admin.handle_report', report_id=r.id, action='resolve') }}">
+          {{ form.csrf_token }}
+          <button type="submit" class="btn btn-sm btn-primary">인정</button>
+        </form>
+        <form class="inline-form" method="post" action="{{ url_for('admin.handle_report', report_id=r.id, action='dismiss') }}">
+          {{ form.csrf_token }}
+          <button type="submit" class="btn btn-sm">기각</button>
+        </form>
+        {% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p class="muted">접수된 신고가 없습니다.</p>
+{% endif %}
+{% endblock %}

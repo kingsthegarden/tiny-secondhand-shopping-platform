@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% from "_macros.html" import render_field %}
+{% block title %}{% if mode == 'new' %}상품 등록{% else %}상품 수정{% endif %}{% endblock %}
+{% block content %}
+<section class="card narrow">
+  <h1>{% if mode == 'new' %}상품 등록{% else %}상품 수정{% endif %}</h1>
+  <form method="post" enctype="multipart/form-data">
+    {{ form.csrf_token }}
+    {{ render_field(form.title) }}
+    {{ render_field(form.description) }}
+    {{ render_field(form.price) }}
+    {{ render_field(form.image) }}
+    <p class="muted">이미지: png/jpg/jpeg/gif/webp, 최대 2MB</p>
+    <button type="submit" class="btn btn-primary btn-block">
+      {% if mode == 'new' %}등록하기{% else %}수정하기{% endif %}
+    </button>
+  </form>
+</section>
+{% endblock %}

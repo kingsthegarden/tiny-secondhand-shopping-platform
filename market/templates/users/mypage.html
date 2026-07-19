@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% from "_macros.html" import render_field %}
+{% block title %}마이페이지{% endblock %}
+{% block content %}
+<h1>마이페이지</h1>
+
+<section class="card">
+  <h2>내 정보</h2>
+  <p>아이디: <strong>{{ current_user.username }}</strong></p>
+  <p>잔액: <strong>{{ "{:,}".format(current_user.balance) }}원</strong></p>
+  <p><a href="{{ url_for('users.profile', user_id=current_user.id) }}">내 공개 프로필 보기</a></p>
+</section>
+
+<section class="card">
+  <h2>소개글 수정</h2>
+  <form method="post" action="{{ url_for('users.update_bio') }}">
+    {{ bio_form.csrf_token }}
+    {{ render_field(bio_form.bio) }}
+    <button type="submit" class="btn btn-primary">저장</button>
+  </form>
+</section>
+
+<section class="card">
+  <h2>비밀번호 변경</h2>
+  <form method="post" action="{{ url_for('users.update_password') }}">
+    {{ pw_form.csrf_token }}
+    {{ render_field(pw_form.current_password) }}
+    {{ render_field(pw_form.new_password) }}
+    {{ render_field(pw_form.new_password2) }}
+    <button type="submit" class="btn btn-primary">변경</button>
+  </form>
+</section>
+{% endblock %}
