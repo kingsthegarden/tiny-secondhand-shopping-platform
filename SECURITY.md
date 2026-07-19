@@ -52,6 +52,7 @@
 | 5-2 | 일반 사용자가 `/admin` 접근 | `admin_required` 데코레이터로 역할 검사 | `utils.py`, `routes/admin.py` |
 | 5-3 | 미로그인 사용자가 기능 접근 | `login_required` 데코레이터 일괄 적용 | `utils.py` |
 | 5-4 | 타인의 1:1 채팅방 참여/도청 | Socket 연결 시 인증 확인 + join/send 시 방 멤버십 서버측 검증 | `sockets.py`, `utils.py` |
+| 5-5 | 관리자가 사용자 관리 화면에서 **자기 자신의 role/status도 변경 가능** → 실수로 자기 권한을 `user`로 낮추면 그 관리자가 유일한 관리자였을 경우 시스템에 관리자가 0명이 되어 앱 안에서 복구 불가(서버 CLI 재실행 필요). 기존에는 status만 자기 자신 변경을 막고 있었고 role은 막혀 있지 않았음 | 자기 자신의 계정은 이 화면에서 role/status 변경 자체를 완전히 차단(다른 관리자 계정 사용 유도). CSRF로 보호되어 외부 공격 벡터는 아니지만, 실수로 인한 자기 잠금(self-lockout) 가용성 문제였음 | `routes/admin.py` |
 
 ## 6. 파일 업로드
 

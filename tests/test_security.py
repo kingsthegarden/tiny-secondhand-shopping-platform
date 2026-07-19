@@ -126,6 +126,19 @@ def test_idor_cannot_edit_others_product(app, client):
     assert resp.status_code == 403
 
 
+def test_admin_cannot_change_own_role_or_status(app, client):
+    """자기 자신의 role/status는 관리자 화면에서 바꿀 수 없음(자기 잠금 방지)."""
+    admin = db.session.execute(db.select(User).filter_by(username="admin1")).scalar_one()
+    login(client, username="admin1")
+    token = get_csrf(client, "/admin/users")
+    resp = client.post(f"/admin/users/{admin.id}/update", data={
+        "csrf_token": token, "status": "dormant", "role": "user"},
+        follow_redirects=True)
+    assert "자기 자신의 계정은".encode() in resp.data
+    db.session.expire_all()
+    assert admin.role == "admin" and admin.status == User.STATUS_ACTIVE
+
+
 # ------------------------------------------------------------ injection ----
 
 def test_search_sql_injection_is_inert(client):

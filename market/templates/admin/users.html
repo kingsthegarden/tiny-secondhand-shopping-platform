@@ -20,6 +20,9 @@
       <td>{{ "{:,}".format(u.balance) }}원</td>
       <td>{{ u.created_at.strftime("%Y-%m-%d") }}</td>
       <td>
+        {% if u.id == current_user.id %}
+        <span class="muted">본인 계정 (다른 관리자 계정으로 변경)</span>
+        {% else %}
         <form class="inline-form row-form" method="post" action="{{ url_for('admin.update_user', user_id=u.id) }}">
           {{ form.csrf_token }}
           <select name="status" class="input input-sm">
@@ -34,6 +37,7 @@
           </select>
           <button type="submit" class="btn btn-sm">적용</button>
         </form>
+        {% endif %}
       </td>
     </tr>
     {% endfor %}

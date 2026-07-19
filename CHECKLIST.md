@@ -49,6 +49,7 @@
 - [x] HTTPS 적용 — `SESSION_COOKIE_SECURE=1` 옵션 및 ngrok HTTPS 안내 (README)
 - [x] 에러 및 예외 처리 — 커스텀 에러 페이지, 스택트레이스 미노출, 디버그 기본 꺼짐
 - [x] 라이브러리 및 의존성 관리 — 최신 안정 버전 명시(`requirements.txt`), 하한 버전 지정
+- [x] (추가) 관리자 자기 잠금 방지 — 관리자가 사용자 관리 화면에서 자기 자신의 role/status를 변경할 수 없음(유일한 관리자가 실수로 권한을 낮추면 시스템에 관리자가 0명이 되는 것 방지) · 테스트: `test_admin_cannot_change_own_role_or_status`
 
 ## 기능 요구사항 체크
 
@@ -63,4 +64,4 @@
 - [x] 유저 간 송금
 - [x] 관리자 페이지(사용자·상품·신고·로그 전체 관리)
 
-전체 테스트 실행: `python -m pytest tests/ -v` → **36 passed**
+전체 테스트 실행: `python -m pytest tests/ -v` → **37 passed**

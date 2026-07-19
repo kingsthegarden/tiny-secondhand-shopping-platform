@@ -50,8 +50,13 @@ def update_user(user_id):
     user = db.session.get(User, user_id)
     if user is None:
         abort(404)
-    if user.id == g.user.id and form.status.data != User.STATUS_ACTIVE:
-        flash("자기 자신의 상태는 변경할 수 없습니다.", "danger")
+    # Self-modification is blocked outright (not just status): without this,
+    # an admin could demote their own role to "user" via this same form
+    # (only status was guarded before), silently losing admin access. If
+    # they were the only admin, that's a full self-lockout with no in-app
+    # recovery path.
+    if user.id == g.user.id:
+        flash("자기 자신의 계정은 이 화면에서 변경할 수 없습니다. 다른 관리자 계정을 이용하세요.", "danger")
         return redirect(url_for("admin.users"))
     user.status = form.status.data
     user.role = form.role.data
