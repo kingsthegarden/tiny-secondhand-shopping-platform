@@ -8,7 +8,7 @@ from tests.conftest import get_csrf, login
 def test_password_stored_hashed(app):
     """비밀번호 평문 저장 금지."""
     user = db.session.execute(db.select(User).filter_by(username="alice")).scalar_one()
-    assert "Passw0rd1" not in user.password_hash
+    assert "TestPass921" not in user.password_hash
     assert user.password_hash.startswith(("scrypt:", "pbkdf2:"))
 
 
@@ -26,7 +26,7 @@ def test_register_rejects_bad_username(client):
     token = get_csrf(client, "/register")
     resp = client.post("/register", data={
         "csrf_token": token, "username": "<script>alert(1)</script>",
-        "password": "Passw0rd1", "password2": "Passw0rd1"})
+        "password": "TestPass921", "password2": "TestPass921"})
     assert "아이디는".encode() in resp.data
 
 
@@ -36,6 +36,35 @@ def test_login_wrong_password_generic_error(client):
         "csrf_token": token, "username": "alice", "password": "WrongPw123"})
     # same message for wrong id / wrong pw (no user enumeration)
     assert "아이디 또는 비밀번호가 올바르지 않습니다".encode() in resp.data
+
+
+def test_login_nonexistent_user_same_message(client):
+    """존재하지 않는 아이디로 로그인해도 동일한 실패 메시지(응답 자체는 즉시 200)."""
+    token = get_csrf(client, "/login")
+    resp = client.post("/login", data={
+        "csrf_token": token, "username": "no_such_user", "password": "WrongPw123"})
+    assert resp.status_code == 200
+    assert "아이디 또는 비밀번호가 올바르지 않습니다".encode() in resp.data
+
+
+def test_register_rejects_common_password(client):
+    token = get_csrf(client, "/register")
+    resp = client.post("/register", data={
+        "csrf_token": token, "username": "newbie2",
+        "password": "password123", "password2": "password123"})
+    assert "흔하게 쓰이는".encode() in resp.data
+    assert db.session.execute(
+        db.select(User).filter_by(username="newbie2")).scalar_one_or_none() is None
+
+
+def test_register_rate_limited(app, client):
+    for i in range(6):
+        token = get_csrf(client, "/register")
+        resp = client.post("/register", data={
+            "csrf_token": token, "username": f"ratelimit{i}",
+            "password": "TestPass921", "password2": "TestPass921"},
+            follow_redirects=True)
+    assert "너무 잦습니다".encode() in resp.data
 
 
 def test_account_lockout_after_failures(app, client):
@@ -199,7 +228,7 @@ def test_product_blocked_after_threshold_reports(app, client):
     db.session.add(product)
     for i in range(3):
         db.session.add(User(username=f"reporter{i}",
-                            password_hash=generate_password_hash("Passw0rd1"),
+                            password_hash=generate_password_hash("TestPass921"),
                             balance=0))
     db.session.commit()
 

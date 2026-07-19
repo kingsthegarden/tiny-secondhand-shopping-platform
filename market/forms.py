@@ -16,6 +16,18 @@ from wtforms.validators import (DataRequired, Length, NumberRange, Regexp,
 USERNAME_RE = r"^[A-Za-z0-9_]{3,20}$"
 USERNAME_MSG = "아이디는 3~20자의 영문/숫자/밑줄(_)만 사용할 수 있습니다."
 
+# Rejected even though they pass the length/charset rule: top-of-list
+# passwords from public breach-corpus frequency lists (e.g. RockYou),
+# adapted to fit our "letters+digits" policy. Defense-in-depth on top of
+# the lockout/rate-limit — these are the first guesses any brute-force
+# tool tries.
+_COMMON_WEAK_PASSWORDS = {
+    "password1", "password12", "password123", "12345678", "123456789",
+    "1234567890", "qwerty123", "qwertyui1", "abc12345", "iloveyou1",
+    "admin1234", "letmein12", "welcome12", "monkey123", "football1",
+    "dragon123", "passw0rd1", "trustno12", "sunshine1", "princess1",
+}
+
 
 def validate_password_strength(form, field):
     pw = field.data or ""
@@ -23,6 +35,8 @@ def validate_password_strength(form, field):
         raise ValidationError("비밀번호는 8~64자여야 합니다.")
     if not re.search(r"[A-Za-z]", pw) or not re.search(r"[0-9]", pw):
         raise ValidationError("비밀번호는 영문과 숫자를 모두 포함해야 합니다.")
+    if pw.lower() in _COMMON_WEAK_PASSWORDS:
+        raise ValidationError("너무 흔하게 쓰이는 비밀번호입니다. 다른 비밀번호를 사용하세요.")
 
 
 class RegisterForm(FlaskForm):

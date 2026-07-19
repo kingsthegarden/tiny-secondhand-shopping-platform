@@ -12,6 +12,9 @@
 - [x] 세션 만료 및 재인증 — 30분 만료, 비밀번호 변경 시 현재 비밀번호 재확인 · 테스트: `test_password_change_requires_current_password`
 - [x] 실패 로그인 방어 — 5회 실패 시 5분 잠금 + IP 레이트리밋 · 테스트: `test_account_lockout_after_failures`
 - [x] 오류 메시지 — 동일 실패 메시지(계정 열거 방지), 커스텀 에러 페이지 · 테스트: `test_login_wrong_password_generic_error`
+- [x] (추가) 응답 시간 기반 계정 열거 방지 — 존재하지 않는 계정도 더미 해시로 동일 시간 소요 · 테스트: `test_login_nonexistent_user_same_message`
+- [x] (추가) 회원가입 남용 방지 — IP별 시간당 5회 제한 · 테스트: `test_register_rate_limited`
+- [x] (추가) 흔한 비밀번호 차단 — 유출 비밀번호 상위 패턴 차단목록 · 테스트: `test_register_rejects_common_password`
 
 ## 상품 등록 및 관리
 
@@ -60,4 +63,4 @@
 - [x] 유저 간 송금
 - [x] 관리자 페이지(사용자·상품·신고·로그 전체 관리)
 
-전체 테스트 실행: `python -m pytest tests/ -v` → **33 passed**
+전체 테스트 실행: `python -m pytest tests/ -v` → **36 passed**

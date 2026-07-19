@@ -129,4 +129,52 @@ def create_app(config_object=Config):
         db.session.commit()
         click.echo(f"관리자 계정 준비 완료: {username}")
 
+    # --- CLI: seed a few demo products (optional, dev/demo only) ---
+    @app.cli.command("seed-demo")
+    def seed_demo():
+        """Create a demo seller + sample products so the listing isn't empty.
+
+        Safe to run repeatedly (skips if already seeded). Not run
+        automatically on startup — invoke it explicitly when you want demo
+        data, e.g. right after a fresh clone.
+        """
+        import secrets as _secrets
+
+        from werkzeug.security import generate_password_hash
+        from market.models import Product
+
+        seller = db.session.execute(
+            db.select(User).filter_by(username="demo_seller")).scalar_one_or_none()
+        if seller is None:
+            # Random password: this account only exists to own demo listings,
+            # nobody is meant to log into it, so there is no fixed/predictable
+            # credential sitting in the source code.
+            seller = User(
+                username="demo_seller",
+                password_hash=generate_password_hash(_secrets.token_urlsafe(24)),
+                bio="데모용 판매자 계정입니다.",
+                balance=app.config["STARTING_BALANCE"],
+            )
+            db.session.add(seller)
+            db.session.flush()
+
+        if db.session.execute(
+                db.select(Product).filter_by(seller_id=seller.id)).first():
+            click.echo("이미 데모 상품이 있습니다. 건너뜁니다.")
+            return
+
+        demo_products = [
+            ("아이폰 13 미니 128GB", "배터리 성능 92%, 생활기스 약간 있음. 박스/충전기 포함.", 450_000),
+            ("무선 이어폰 (버즈 프로)", "구매 6개월, 케이스 포함, 정상 작동합니다.", 60_000),
+            ("자바의 정석 3판 (전공서적)", "필기 거의 없음, 밑줄 몇 군데. 학기 끝나서 판매.", 12_000),
+            ("접이식 자전거 20인치", "출퇴근용으로 쓰던 자전거, 타이어 최근 교체.", 90_000),
+            ("네스프레소 캡슐 커피머신", "이사 때문에 판매, 세척 완료 상태.", 55_000),
+            ("게이밍 모니터 27인치 165hz", "번인 없음, QHD 해상도, 박스 있음.", 180_000),
+        ]
+        for title, description, price in demo_products:
+            db.session.add(Product(title=title, description=description,
+                                   price=price, seller_id=seller.id))
+        db.session.commit()
+        click.echo(f"데모 상품 {len(demo_products)}개를 등록했습니다 (판매자: demo_seller).")
+
     return app

@@ -53,6 +53,14 @@ flask --app app create-admin admin --password 'AdminPass1'
 - 데이터베이스(SQLite)와 세션 서명 키는 최초 실행 시 `instance/` 아래에 자동 생성됩니다.
 - 포트 변경: `PORT=8080 python app.py`
 
+가입 직후에는 상품이 하나도 없어 목록이 비어 보입니다. 둘러보기용 데모 상품을 채워 넣으려면(선택 사항, 반복 실행해도 안전):
+
+```bash
+flask --app app seed-demo
+```
+
+`demo_seller`라는 판매 전용 계정(비밀번호는 매번 랜덤 생성, 로그인 용도로 쓰이지 않음) 아래에 샘플 상품 6개가 등록됩니다.
+
 외부에서 접속 테스트를 하려면 ngrok을 사용합니다:
 
 ```bash

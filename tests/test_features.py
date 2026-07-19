@@ -7,7 +7,7 @@ def test_register_and_login_flow(client):
     token = get_csrf(client, "/register")
     resp = client.post("/register", data={
         "csrf_token": token, "username": "charlie",
-        "password": "Passw0rd1", "password2": "Passw0rd1"},
+        "password": "TestPass921", "password2": "TestPass921"},
         follow_redirects=True)
     assert "회원가입이 완료".encode() in resp.data
     resp = login(client, username="charlie")
@@ -18,7 +18,7 @@ def test_duplicate_username_rejected(client):
     token = get_csrf(client, "/register")
     resp = client.post("/register", data={
         "csrf_token": token, "username": "alice",
-        "password": "Passw0rd1", "password2": "Passw0rd1"})
+        "password": "TestPass921", "password2": "TestPass921"})
     assert "이미 사용 중인 아이디".encode() in resp.data
 
 
@@ -56,13 +56,13 @@ def test_mypage_bio_and_password_update(client):
 
     token = get_csrf(client, "/users/me")
     resp = client.post("/users/me/password", data={
-        "csrf_token": token, "current_password": "Passw0rd1",
+        "csrf_token": token, "current_password": "TestPass921",
         "new_password": "NewPassw0rd2", "new_password2": "NewPassw0rd2"},
         follow_redirects=True)
     assert "비밀번호가 변경되었습니다".encode() in resp.data
     # old password no longer works, new one does
     client.post("/logout", data={"csrf_token": get_csrf(client, "/users/me")})
-    resp = login(client, password="Passw0rd1")
+    resp = login(client, password="TestPass921")
     assert "올바르지 않습니다".encode() in resp.data
     resp = login(client, password="NewPassw0rd2")
     assert "로그아웃".encode() in resp.data

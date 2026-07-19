@@ -47,7 +47,7 @@ def app():
         for name, role in [("alice", "user"), ("bob", "user"), ("admin1", "admin")]:
             db.session.add(User(
                 username=name,
-                password_hash=generate_password_hash("Passw0rd1"),
+                password_hash=generate_password_hash("TestPass921"),
                 role=role, balance=100_000))
         db.session.commit()
         yield app
@@ -69,7 +69,7 @@ def get_csrf(client, url):
     return m.group(1).decode()
 
 
-def login(client, username="alice", password="Passw0rd1"):
+def login(client, username="alice", password="TestPass921"):
     token = get_csrf(client, "/login")
     return client.post("/login", data={
         "csrf_token": token, "username": username, "password": password,
