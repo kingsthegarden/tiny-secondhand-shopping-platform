@@ -15,3 +15,6 @@ __pycache__/
 *.pdf
 *.pdf:Zone.Identifier
 \[시큐어 코딩\] 과제 공지.txt
+
+# local AI-assistant guidance (kept locally, not published)
+CLAUDE.md
