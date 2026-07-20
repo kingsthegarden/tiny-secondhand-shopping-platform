@@ -1,11 +1,12 @@
 """Admin panel: manage users, products, reports, audit logs."""
 from flask import (Blueprint, abort, flash, g, redirect, render_template,
                    request, url_for)
+from werkzeug.security import check_password_hash
 
-from market.forms import AdminUserForm, EmptyForm
+from market.forms import AdminUserForm, EmptyForm, GrantAdminForm
 from market.models import (AuditLog, ChatMessage, Product, Report, Transfer,
                            User, audit, db)
-from market.utils import admin_required, delete_image
+from market.utils import admin_required, delete_image, rate_limited
 
 bp = Blueprint("admin", __name__, url_prefix="/admin")
 
@@ -38,7 +39,7 @@ def users():
     user_list = db.session.execute(
         query.order_by(User.created_at.desc()).limit(200)).scalars().all()
     return render_template("admin/users.html", users=user_list, q=q,
-                           form=AdminUserForm())
+                           form=AdminUserForm(), grant_form=GrantAdminForm())
 
 
 @bp.route("/users/<int:user_id>/update", methods=["POST"])
@@ -65,6 +66,37 @@ def update_user(user_id):
           actor_id=g.user.id)
     db.session.commit()
     flash(f"{user.username} 계정이 업데이트되었습니다.", "success")
+    return redirect(url_for("admin.users"))
+
+
+@bp.route("/users/<int:user_id>/grant-admin", methods=["POST"])
+@admin_required
+def grant_admin(user_id):
+    form = GrantAdminForm()
+    if not form.validate_on_submit():
+        abort(400)
+    user = db.session.get(User, user_id)
+    if user is None:
+        abort(404)
+    if user.id == g.user.id:
+        flash("자기 자신의 계정은 이 화면에서 변경할 수 없습니다. 다른 관리자 계정을 이용하세요.", "danger")
+        return redirect(url_for("admin.users"))
+    # Throttle password guesses against the acting admin's own account,
+    # keyed by admin id (not IP) since this route is only reachable with an
+    # already-authenticated admin session.
+    if rate_limited(f"grant-admin:{g.user.id}", limit=5, window_seconds=300):
+        flash("시도가 너무 잦습니다. 잠시 후 다시 시도해주세요.", "danger")
+        return redirect(url_for("admin.users"))
+    # Step-up re-authentication: the acting admin's own password must be
+    # confirmed before this privilege-escalating action goes through, so a
+    # hijacked/unattended admin session can't be used to mint new admins.
+    if not check_password_hash(g.user.password_hash, form.password.data):
+        flash("본인 비밀번호가 올바르지 않습니다.", "danger")
+        return redirect(url_for("admin.users"))
+    user.role = "admin"
+    audit("admin_grant_admin", f"user#{user.id} -> admin", actor_id=g.user.id)
+    db.session.commit()
+    flash(f"{user.username} 계정에 관리자 권한이 부여되었습니다.", "success")
     return redirect(url_for("admin.users"))
 
 

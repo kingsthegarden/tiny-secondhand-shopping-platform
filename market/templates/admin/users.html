@@ -31,12 +31,18 @@
             {% endfor %}
           </select>
           <select name="role" class="input input-sm">
-            {% for r in ['user', 'admin'] %}
-            <option value="{{ r }}" {% if u.role == r %}selected{% endif %}>{{ r }}</option>
-            {% endfor %}
+            <option value="user" {% if u.role == 'user' %}selected{% endif %}>user</option>
           </select>
           <button type="submit" class="btn btn-sm">적용</button>
         </form>
+        {% if u.role != 'admin' %}
+        <form class="inline-form row-form" method="post" action="{{ url_for('admin.grant_admin', user_id=u.id) }}"
+              onsubmit="return confirm('{{ u.username }} 계정에 관리자 권한을 부여합니다. 계속할까요?');">
+          {{ grant_form.csrf_token }}
+          {{ grant_form.password(class_="input input-sm", placeholder="본인 비밀번호") }}
+          <button type="submit" class="btn btn-sm btn-danger">관리자 부여</button>
+        </form>
+        {% endif %}
         {% endif %}
       </td>
     </tr>

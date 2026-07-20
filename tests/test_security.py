@@ -139,6 +139,66 @@ def test_admin_cannot_change_own_role_or_status(app, client):
     assert admin.role == "admin" and admin.status == User.STATUS_ACTIVE
 
 
+def test_update_user_form_rejects_role_admin(app, client):
+    """일반 업데이트 폼으로는 role=admin을 부여할 수 없음(권한 상승은 별도 재인증 플로우로만)."""
+    alice = db.session.execute(db.select(User).filter_by(username="alice")).scalar_one()
+    login(client, username="admin1")
+    token = get_csrf(client, "/admin/users")
+    resp = client.post(f"/admin/users/{alice.id}/update", data={
+        "csrf_token": token, "status": "active", "role": "admin"})
+    assert resp.status_code == 400
+    db.session.expire_all()
+    assert alice.role == "user"
+
+
+def test_grant_admin_requires_correct_password(app, client):
+    """관리자 권한 부여는 본인 비밀번호 재확인(step-up)이 성공해야만 적용됨."""
+    alice = db.session.execute(db.select(User).filter_by(username="alice")).scalar_one()
+    login(client, username="admin1")
+    token = get_csrf(client, "/admin/users")
+    resp = client.post(f"/admin/users/{alice.id}/grant-admin", data={
+        "csrf_token": token, "password": "WrongPassword1"}, follow_redirects=True)
+    assert "본인 비밀번호가 올바르지 않습니다".encode() in resp.data
+    db.session.expire_all()
+    assert alice.role == "user"
+
+    token = get_csrf(client, "/admin/users")
+    resp = client.post(f"/admin/users/{alice.id}/grant-admin", data={
+        "csrf_token": token, "password": "TestPass921"}, follow_redirects=True)
+    assert resp.status_code == 200
+    db.session.expire_all()
+    assert alice.role == "admin"
+
+
+def test_grant_admin_cannot_target_self(app, client):
+    """자기 자신에게는 grant-admin 경로도 사용할 수 없음(자기 잠금/오남용 방지 일관성)."""
+    admin = db.session.execute(db.select(User).filter_by(username="admin1")).scalar_one()
+    login(client, username="admin1")
+    token = get_csrf(client, "/admin/users")
+    resp = client.post(f"/admin/users/{admin.id}/grant-admin", data={
+        "csrf_token": token, "password": "TestPass921"}, follow_redirects=True)
+    assert "자기 자신의 계정은".encode() in resp.data
+
+
+def test_grant_admin_rate_limited(app, client):
+    """비밀번호 오답을 반복해도 무제한 시도할 수 없음(관리자 계정 대상 브루트포스 방지)."""
+    bob = db.session.execute(db.select(User).filter_by(username="bob")).scalar_one()
+    login(client, username="admin1")
+    for _ in range(6):
+        token = get_csrf(client, "/admin/users")
+        resp = client.post(f"/admin/users/{bob.id}/grant-admin", data={
+            "csrf_token": token, "password": "WrongPassword1"}, follow_redirects=True)
+    assert "너무 잦습니다".encode() in resp.data
+
+    # even the correct password is rejected once the limit is hit
+    token = get_csrf(client, "/admin/users")
+    resp = client.post(f"/admin/users/{bob.id}/grant-admin", data={
+        "csrf_token": token, "password": "TestPass921"}, follow_redirects=True)
+    assert "너무 잦습니다".encode() in resp.data
+    db.session.expire_all()
+    assert bob.role == "user"
+
+
 # ------------------------------------------------------------ injection ----
 
 def test_search_sql_injection_is_inert(client):

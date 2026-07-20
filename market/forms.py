@@ -110,9 +110,21 @@ class TransferForm(FlaskForm):
 
 
 class AdminUserForm(FlaskForm):
-    """Admin: change a user's status/role."""
+    """Admin: change a user's status/role.
+
+    "admin" is intentionally NOT one of the role choices here: granting
+    admin is a privilege escalation and goes through GrantAdminForm's
+    step-up (re-authenticated) flow instead, not this one-click row form.
+    A tampered POST with role=admin fails WTForms choice validation.
+    """
     status = SelectField("상태", choices=[("active", "active"), ("dormant", "dormant"), ("banned", "banned")])
-    role = SelectField("권한", choices=[("user", "user"), ("admin", "admin")])
+    role = SelectField("권한", choices=[("user", "user")])
+
+
+class GrantAdminForm(FlaskForm):
+    """Step-up re-authentication required to grant admin privileges."""
+    password = PasswordField("본인 비밀번호 확인", validators=[
+        DataRequired(message="관리자 승격을 위해 본인 비밀번호를 입력하세요.")])
 
 
 class EmptyForm(FlaskForm):
