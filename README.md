@@ -75,7 +75,7 @@ SESSION_COOKIE_SECURE=1 python app.py
 
 ## 테스트
 
-기능 및 보안 테스트 33개가 포함되어 있습니다 (CSRF 보호를 켠 상태 그대로 검증):
+기능 및 보안 테스트 43개가 포함되어 있습니다 (CSRF 보호를 켠 상태 그대로 검증):
 
 ```bash
 python -m pytest tests/ -v

@@ -15,6 +15,7 @@
 - [x] (추가) 응답 시간 기반 계정 열거 방지 — 존재하지 않는 계정도 더미 해시로 동일 시간 소요 · 테스트: `test_login_nonexistent_user_same_message`
 - [x] (추가) 회원가입 남용 방지 — IP별 시간당 5회 제한 · 테스트: `test_register_rate_limited`
 - [x] (추가) 흔한 비밀번호 차단 — 유출 비밀번호 상위 패턴 차단목록 · 테스트: `test_register_rejects_common_password`
+- [x] (추가) 관리자 계정 생성 CLI 신뢰성 — `flask create-admin`을 기존 계정에 재실행해도 비밀번호·로그인 잠금 상태가 실제로 갱신됨(예전엔 role만 바뀌고 비밀번호는 그대로였음) · 테스트: `test_create_admin_cli_updates_password_on_existing_account`
 
 ## 상품 등록 및 관리
 
@@ -50,6 +51,8 @@
 - [x] 에러 및 예외 처리 — 커스텀 에러 페이지, 스택트레이스 미노출, 디버그 기본 꺼짐
 - [x] 라이브러리 및 의존성 관리 — 최신 안정 버전 명시(`requirements.txt`), 하한 버전 지정
 - [x] (추가) 관리자 자기 잠금 방지 — 관리자가 사용자 관리 화면에서 자기 자신의 role/status를 변경할 수 없음(유일한 관리자가 실수로 권한을 낮추면 시스템에 관리자가 0명이 되는 것 방지) · 테스트: `test_admin_cannot_change_own_role_or_status`
+- [x] (추가) 관리자 권한 상승(privilege escalation) 방어 — 일반 사용자 관리 폼은 role 선택지에서 "admin"을 제거해 서버측에서도 거부, 관리자 승격은 본인 비밀번호 재확인(step-up) 플로우로만 가능하며 재인증 시도는 5분당 5회로 제한 · 테스트: `test_update_user_form_rejects_role_admin`, `test_grant_admin_requires_correct_password`, `test_grant_admin_cannot_target_self`, `test_grant_admin_rate_limited`
+- [x] (추가) 다른 관리자 조용한 강등 방지 — role 선택지를 "user"로 제한한 부작용으로 다른 관리자의 status만 바꿔도 role이 함께 넘어가 강등되던 회귀를 차단 · 테스트: `test_update_user_does_not_demote_other_admin`
 
 ## 기능 요구사항 체크
 
@@ -64,4 +67,4 @@
 - [x] 유저 간 송금
 - [x] 관리자 페이지(사용자·상품·신고·로그 전체 관리)
 
-전체 테스트 실행: `python -m pytest tests/ -v` → **37 passed**
+전체 테스트 실행: `python -m pytest tests/ -v` → **43 passed**
