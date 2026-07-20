@@ -180,6 +180,27 @@ def test_grant_admin_cannot_target_self(app, client):
     assert "자기 자신의 계정은".encode() in resp.data
 
 
+def test_update_user_does_not_demote_other_admin(app, client):
+    """다른 관리자의 상태만 바꿔도 role select에 'user'만 남아있어 role이 함께 넘어감 —
+    이 경우에도 기존 관리자 권한이 조용히 강등되면 안 됨(자기 강등 방지와 별개의 회귀)."""
+    from werkzeug.security import generate_password_hash
+    admin2 = User(username="admin2",
+                  password_hash=generate_password_hash("TestPass921"),
+                  role="admin", balance=100_000)
+    db.session.add(admin2)
+    db.session.commit()
+
+    login(client, username="admin1")
+    token = get_csrf(client, "/admin/users")
+    resp = client.post(f"/admin/users/{admin2.id}/update", data={
+        "csrf_token": token, "status": "dormant", "role": "user"})
+    assert resp.status_code == 302
+    db.session.expire_all()
+    admin2 = db.session.get(User, admin2.id)
+    assert admin2.role == "admin"
+    assert admin2.status == "dormant"
+
+
 def test_grant_admin_rate_limited(app, client):
     """비밀번호 오답을 반복해도 무제한 시도할 수 없음(관리자 계정 대상 브루트포스 방지)."""
     bob = db.session.execute(db.select(User).filter_by(username="bob")).scalar_one()

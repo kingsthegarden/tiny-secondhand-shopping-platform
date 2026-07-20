@@ -30,9 +30,14 @@
             <option value="{{ s }}" {% if u.status == s %}selected{% endif %}>{{ s }}</option>
             {% endfor %}
           </select>
+          {% if u.role == 'admin' %}
+          <span class="input input-sm muted">admin (변경 불가)</span>
+          <input type="hidden" name="role" value="user">
+          {% else %}
           <select name="role" class="input input-sm">
             <option value="user" {% if u.role == 'user' %}selected{% endif %}>user</option>
           </select>
+          {% endif %}
           <button type="submit" class="btn btn-sm">적용</button>
         </form>
         {% if u.role != 'admin' %}

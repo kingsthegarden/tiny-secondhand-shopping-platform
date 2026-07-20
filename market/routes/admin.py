@@ -60,7 +60,13 @@ def update_user(user_id):
         flash("자기 자신의 계정은 이 화면에서 변경할 수 없습니다. 다른 관리자 계정을 이용하세요.", "danger")
         return redirect(url_for("admin.users"))
     user.status = form.status.data
-    user.role = form.role.data
+    # form.role only ever offers "user" (see AdminUserForm), so applying it
+    # unconditionally would silently demote any other admin the instant
+    # their status is changed. Role here can only ever *stay* "user" for
+    # non-admin targets; admins keep their role and are demoted only via a
+    # dedicated, re-authenticated flow (none exists yet -- out of scope).
+    if user.role != "admin":
+        user.role = form.role.data
     audit("admin_update_user",
           f"user#{user.id} status={user.status} role={user.role}",
           actor_id=g.user.id)
