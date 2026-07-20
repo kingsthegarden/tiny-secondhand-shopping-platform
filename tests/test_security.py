@@ -1,5 +1,9 @@
 """Security-focused tests: each test maps to a checklist item."""
-from market.models import Product, Report, User, db
+from datetime import timedelta
+
+from werkzeug.security import check_password_hash
+
+from market.models import Product, Report, User, db, utcnow
 from tests.conftest import get_csrf, login
 
 
@@ -10,6 +14,28 @@ def test_password_stored_hashed(app):
     user = db.session.execute(db.select(User).filter_by(username="alice")).scalar_one()
     assert "TestPass921" not in user.password_hash
     assert user.password_hash.startswith(("scrypt:", "pbkdf2:"))
+
+
+def test_create_admin_cli_updates_password_on_existing_account(app):
+    """`flask create-admin`을 이미 존재하는 계정에 다시 실행하면 비밀번호와 잠금 상태도
+    함께 갱신되어야 함 (예전에는 role만 바뀌고 비밀번호는 그대로 남아, 같은 성공 메시지를
+    보고도 새로 지정한 비밀번호로 로그인이 계속 실패하는 문제가 있었음)."""
+    alice = db.session.execute(db.select(User).filter_by(username="alice")).scalar_one()
+    alice.failed_logins = 3
+    alice.locked_until = utcnow() + timedelta(minutes=5)
+    db.session.commit()
+
+    runner = app.test_cli_runner()
+    result = runner.invoke(args=["create-admin", "alice", "--password", "NewAdminPass1"])
+    assert result.exit_code == 0
+    assert "비밀번호를 갱신했습니다" in result.output
+
+    db.session.expire_all()
+    alice = db.session.get(User, alice.id)
+    assert alice.role == "admin"
+    assert check_password_hash(alice.password_hash, "NewAdminPass1")
+    assert alice.failed_logins == 0
+    assert alice.locked_until is None
 
 
 def test_register_rejects_weak_password(client):

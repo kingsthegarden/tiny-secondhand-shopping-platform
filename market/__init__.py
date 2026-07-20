@@ -108,7 +108,7 @@ def create_app(config_object=Config):
     @click.argument("username")
     @click.password_option()
     def create_admin(username, password):
-        """Create (or promote) an admin account."""
+        """Create a new admin account, or promote an existing account to admin."""
         import re
         from werkzeug.security import generate_password_hash
         from market.forms import USERNAME_RE
@@ -124,10 +124,23 @@ def create_app(config_object=Config):
                         role="admin",
                         balance=app.config["STARTING_BALANCE"])
             db.session.add(user)
+            db.session.commit()
+            click.echo(f"관리자 계정을 새로 생성했습니다: {username}")
         else:
+            # Previously this branch only flipped `role`, silently keeping
+            # whatever password the account already had -- running this
+            # command with a *new* password against an existing username
+            # looked like it worked (same success message either way) but
+            # the old password stayed in effect, so a login with the
+            # password just typed would always fail. Set the password (and
+            # clear any failed-login lockout) so the command does what its
+            # own output claims.
             user.role = "admin"
-        db.session.commit()
-        click.echo(f"관리자 계정 준비 완료: {username}")
+            user.password_hash = generate_password_hash(password)
+            user.failed_logins = 0
+            user.locked_until = None
+            db.session.commit()
+            click.echo(f"기존 계정을 관리자로 승격하고 비밀번호를 갱신했습니다: {username}")
 
     # --- CLI: seed a few demo products (optional, dev/demo only) ---
     @app.cli.command("seed-demo")
